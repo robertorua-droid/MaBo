@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale Parrucchiere</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Icone Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        body { background-color: #f8f9fa; }
+        .client-card { cursor: pointer; transition: transform 0.2s; }
+        .client-card:hover { transform: translateY(-5px); border-color: #0d6efd; }
+        .history-timeline { border-left: 2px solid #ddd; padding-left: 20px; margin-left: 10px; }
+        .history-item { margin-bottom: 20px; position: relative; }
+        .history-item::before {
+            content: ''; position: absolute; left: -25px; top: 5px;
+            width: 10px; height: 10px; background: #0d6efd; border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1"><i class="bi bi-scissors"></i> Color Manager</span>
+            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#newClientModal">
+                <i class="bi bi-person-plus"></i> Nuovo Cliente
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Cerca -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="Cerca cliente per nome...">
+            </div>
+        </div>
+
+        <!-- Lista Clienti (Verrà riempita da jQuery) -->
+        <div id="clientsList" class="row g-3">
+            <div class="text-center mt-5"><div class="spinner-border text-primary"></div><p>Caricamento...</p></div>
+        </div>
+    </div>
+
+    <!-- MODAL: Dettaglio Cliente & Storico -->
+    <div class="modal fade" id="clientModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="modalClientName">Nome Cliente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Form per Nuova Colorazione -->
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-primary text-white">Aggiungi Nuova Tinta</div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-md-8">
+                                    <input type="text" id="newColorFormula" class="form-control" placeholder="Es: 6.0 + 20 vol">
+                                </div>
+                                <div class="col-md-4">
+                                    <button id="btnAddColor" class="btn btn-primary w-100">Salva Tinta</button>
+                                </div>
+                                <div class="col-12">
+                                    <textarea id="newColorNotes" class="form-control form-control-sm mt-2" placeholder="Note aggiuntive (opzionale)"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Storico -->
+                    <h6>Storico Colorazioni</h6>
+                    <div id="historyList" class="history-timeline mt-3">
+                        <!-- Lo storico verrà inserito qui -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Nuovo Cliente -->
+    <div class="modal fade" id="newClientModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuovo Cliente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="inputFirstName" class="form-control mb-2" placeholder="Nome">
+                    <input type="text" id="inputLastName" class="form-control mb-2" placeholder="Cognome">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="btnSaveClient">Salva</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Librerie -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Script Logica Firebase (Type Module è fondamentale per Firebase v9+) -->
+    <script type="module">
+        // ---------------------------------------------------------
+        // 1. CONFIGURAZIONE FIREBASE
+        // ---------------------------------------------------------
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, arrayUnion, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // SOSTITUISCI QUI SOTTO CON I TUOI DATI DI FIREBASE CONSOLE
+        const firebaseConfig = {
+            // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyA3c5MmceX4gnd1IoZS-pEwSwKEhs-TaKU",
+  authDomain: "mabo-75945.firebaseapp.com",
+  projectId: "mabo-75945",
+  storageBucket: "mabo-75945.firebasestorage.app",
+  messagingSenderId: "296320402452",
+  appId: "1:296320402452:web:d959d63cbfa51f46f05301"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Variabile globale per sapere quale cliente stiamo guardando
+        let currentClientId = null;
+        let allClientsData = []; // Per la ricerca veloce lato client
+
+        // ---------------------------------------------------------
+        // 2. LOGICA APPLICAZIONE
+        // ---------------------------------------------------------
+
+        // Caricamento iniziale Clienti (Real-time)
+        const q = query(collection(db, "clients"), orderBy("lastVisitDate", "desc"));
+        
+        onSnapshot(q, (snapshot) => {
+            allClientsData = [];
+            $('#clientsList').empty();
+
+            snapshot.forEach((doc) => {
+                const client = doc.data();
+                client.id = doc.id; // Salviamo l'ID del documento
+                allClientsData.push(client);
+                renderClientCard(client);
+            });
+
+            if(allClientsData.length === 0) {
+                $('#clientsList').html('<div class="col-12 text-center text-muted">Nessun cliente trovato.</div>');
+            }
+        });
+
+        // Funzione per disegnare la Card Cliente
+        function renderClientCard(client) {
+            const lastColor = client.lastColoration || "Nessuna colorazione registrata";
+            const lastDate = client.lastVisitDate || "";
+            
+            const html = `
+                <div class="col-md-4 col-sm-6 item-client" data-name="${client.firstName} ${client.lastName}">
+                    <div class="card client-card h-100 shadow-sm" id="client-${client.id}">
+                        <div class="card-body">
+                            <h5 class="card-title fw-bold">${client.firstName} ${client.lastName}</h5>
+                            <p class="card-text text-muted small mb-1">Ultima tinta:</p>
+                            <p class="card-text fw-medium text-primary">${lastColor}</p>
+                            <small class="text-secondary float-end">${lastDate}</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+            $('#clientsList').append(html);
+
+            // Click sulla card apre il dettaglio
+            $(`#client-${client.id}`).click(() => openClientDetails(client));
+        }
+
+        // Ricerca cliente (filtro locale)
+        $('#searchInput').on('keyup', function() {
+            const val = $(this).val().toLowerCase();
+            $('.item-client').filter(function() {
+                $(this).toggle($(this).attr('data-name').toLowerCase().indexOf(val) > -1)
+            });
+        });
+
+        // Apertura Modale Dettaglio
+        function openClientDetails(client) {
+            currentClientId = client.id;
+            $('#modalClientName').text(`${client.firstName} ${client.lastName}`);
+            $('#newColorFormula').val(''); 
+            $('#newColorNotes').val('');
+            
+            renderHistory(client.history || []);
+            
+            const modal = new bootstrap.Modal(document.getElementById('clientModal'));
+            modal.show();
+        }
+
+        // Render Storico
+        function renderHistory(historyArray) {
+            $('#historyList').empty();
+            // Ordiniamo dal più recente al più vecchio
+            const sortedHistory = historyArray.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if(sortedHistory.length === 0) {
+                $('#historyList').html('<p class="text-muted">Nessuno storico disponibile.</p>');
+                return;
+            }
+
+            sortedHistory.forEach(item => {
+                const html = `
+                    <div class="history-item">
+                        <div class="fw-bold">${item.date}</div>
+                        <div class="text-dark">${item.formula}</div>
+                        ${item.notes ? `<div class="text-muted small"><em>Note: ${item.notes}</em></div>` : ''}
+                    </div>
+                `;
+                $('#historyList').append(html);
+            });
+        }
+
+        // ---------------------------------------------------------
+        // 3. AZIONI (Salvataggio dati)
+        // ---------------------------------------------------------
+
+        // Salva Nuovo Cliente
+        $('#btnSaveClient').click(async () => {
+            const first = $('#inputFirstName').val();
+            const last = $('#inputLastName').val();
+            if(!first || !last) return alert("Inserisci nome e cognome");
+
+            try {
+                await addDoc(collection(db, "clients"), {
+                    firstName: first,
+                    lastName: last,
+                    lastColoration: "Nuovo Cliente",
+                    lastVisitDate: new Date().toISOString().split('T')[0],
+                    history: []
+                });
+                
+                // Chiudi modale e pulisci
+                bootstrap.Modal.getInstance(document.getElementById('newClientModal')).hide();
+                $('#inputFirstName').val('');
+                $('#inputLastName').val('');
+                
+            } catch (e) {
+                alert("Errore salvataggio: " + e.message);
+            }
+        });
+
+        // Salva Nuova Tinta (e aggiorna storico)
+        $('#btnAddColor').click(async () => {
+            if(!currentClientId) return;
+            
+            const formula = $('#newColorFormula').val();
+            const notes = $('#newColorNotes').val();
+            const today = new Date().toISOString().split('T')[0];
+
+            if(!formula) return alert("Scrivi la formula!");
+
+            const clientRef = doc(db, "clients", currentClientId);
+
+            try {
+                await updateDoc(clientRef, {
+                    lastColoration: formula,
+                    lastVisitDate: today,
+                    history: arrayUnion({
+                        date: today,
+                        formula: formula,
+                        notes: notes
+                    })
+                });
+                
+                // Aggiorniamo l'interfaccia "al volo" chiudendo il modale
+                // (o potremmo ricaricare lo storico, ma Firestore onSnapshot aggiornerà la lista sotto)
+                const modal = bootstrap.Modal.getInstance(document.getElementById('clientModal'));
+                modal.hide();
+                
+            } catch (e) {
+                alert("Errore aggiornamento: " + e.message);
+            }
+        });
+
+    </script>
+</body>
+</html>
