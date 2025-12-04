@@ -103,7 +103,14 @@
                         </div>
                     </div>
 
-                    <h6 class="mb-3 ps-2 border-start border-4 border-primary">Storico Trattamenti</h6>
+                    <!-- Header Storico con pulsante Pulizia -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 ps-2 border-start border-4 border-primary">
+                        <h6 class="mb-0 fw-bold">Storico Trattamenti</h6>
+                        <button id="btnPruneHistory" class="btn btn-outline-danger btn-sm py-0" style="font-size: 0.75rem;" title="Elimina i vecchi, tieni solo i 5 più recenti">
+                            <i class="bi bi-trash"></i> Tieni solo ultimi 5
+                        </button>
+                    </div>
+                    
                     <div id="historyList" class="history-timeline bg-white p-3 rounded shadow-sm"></div>
                 </div>
             </div>
@@ -164,8 +171,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script type="module">
+        // Importo anche getDoc per leggere il singolo cliente
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, doc, updateDoc, arrayUnion, onSnapshot, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, getDoc, updateDoc, arrayUnion, onSnapshot, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const $ = window.jQuery; 
         const firebaseConfig = {
@@ -206,7 +214,6 @@
                 const parts = client.lastVisitDate.split('-');
                 formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
             }
-            // Aggiungiamo old_id ai dati di ricerca per trovarlo
             const searchString = `${client.firstName} ${client.lastName} ${client.old_id || ''}`;
             
             const html = `
@@ -242,7 +249,16 @@
 
         function renderHistory(historyArray) {
             $('#historyList').empty();
+            // ORDINAMENTO PER DATA DECRESCENTE (Più recente in alto)
             const sortedHistory = historyArray.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            // Gestione visibilità pulsante "Tieni solo ultimi 5"
+            if(sortedHistory.length > 5) {
+                $('#btnPruneHistory').show();
+            } else {
+                $('#btnPruneHistory').hide();
+            }
+
             if(sortedHistory.length === 0) {
                 $('#historyList').html('<p class="text-muted fst-italic">Nessuno storico disponibile.</p>');
                 return;
@@ -281,55 +297,69 @@
         });
 
         // -----------------------
+        // LOGICA PULIZIA STORICO
+        // -----------------------
+        document.getElementById('btnPruneHistory').addEventListener('click', async () => {
+            if(!currentClientId) return;
+            
+            // 1. Rileggiamo il cliente dal DB per sicurezza (per avere l'array aggiornato)
+            const clientRef = doc(db, "clients", currentClientId);
+            const docSnap = await getDoc(clientRef);
+            
+            if (docSnap.exists()) {
+                const clientData = docSnap.data();
+                let history = clientData.history || [];
+                
+                if(history.length <= 5) {
+                    alert("Non ci sono abbastanza dati da eliminare.");
+                    return;
+                }
+
+                if(confirm(`Attenzione! Stai per eliminare ${history.length - 5} lavori vecchi dallo storico.\nRimarranno solo i 5 più recenti.\n\nSei sicuro?`)) {
+                    // 2. Ordina per data (più recente primo)
+                    history.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    
+                    // 3. Tieni solo i primi 5
+                    const newHistory = history.slice(0, 5);
+
+                    // 4. Salva
+                    await updateDoc(clientRef, { history: newHistory });
+                    
+                    // 5. Aggiorna la vista nel modale subito
+                    renderHistory(newHistory);
+                    alert("Pulizia completata!");
+                }
+            }
+        });
+
+        // -----------------------
         // LOGICA DI IMPORTAZIONE
         // -----------------------
         document.getElementById('btnRunImport').addEventListener('click', async () => {
             const jsonText = $('#jsonImportInput').val();
             if(!jsonText) { alert("Incolla prima il JSON!"); return; }
-            
             try {
                 const data = JSON.parse(jsonText);
                 if(!Array.isArray(data)) throw new Error("Il formato deve essere una lista [...]");
-
                 const btn = $('#btnRunImport');
-                btn.prop('disabled', true).text(`Importazione di ${data.length} clienti in corso...`);
-                
+                btn.prop('disabled', true).text(`Importazione...`);
                 let count = 0;
                 for(let item of data) {
-                    // Mappiamo i campi dall'Excel/JSON al Database
-                    // Accetta "nome" o "Nome" o "firstName"
                     const firstName = item.nome || item.Nome || item.firstName || "Sconosciuto";
                     const lastName = item.cognome || item.Cognome || item.lastName || "";
                     const oldId = item.old_id || item.ID || item.Id || null;
                     const lastFormula = item.ultima_formula || item.UltimaFormula || "Importato da Access";
-                    
                     await addDoc(collection(db, "clients"), {
-                        firstName: firstName,
-                        lastName: lastName,
-                        old_id: oldId, // Salviamo il vecchio ID!
-                        lastColoration: lastFormula,
-                        lastVisitDate: new Date().toISOString().split('T')[0], // Mettiamo oggi come data fittizia
-                        history: [
-                            {
-                                date: new Date().toISOString().split('T')[0],
-                                formula: lastFormula,
-                                notes: "Dato importato dallo storico precedente"
-                            }
-                        ]
+                        firstName: firstName, lastName: lastName, old_id: oldId,
+                        lastColoration: lastFormula, lastVisitDate: new Date().toISOString().split('T')[0],
+                        history: [{ date: new Date().toISOString().split('T')[0], formula: lastFormula, notes: "Dato importato" }]
                     });
                     count++;
                 }
-
                 alert(`Finito! Importati ${count} clienti.`);
-                const modalEl = document.getElementById('importModal');
-                bootstrap.Modal.getInstance(modalEl).hide();
+                bootstrap.Modal.getInstance(document.getElementById('importModal')).hide();
                 $('#jsonImportInput').val('');
-
-            } catch(e) {
-                alert("Errore nel formato JSON: " + e.message);
-            } finally {
-                $('#btnRunImport').prop('disabled', false).text('Avvia Importazione');
-            }
+            } catch(e) { alert("Errore JSON: " + e.message); } finally { $('#btnRunImport').prop('disabled', false).text('Avvia Importazione'); }
         });
 
         // EXPORT
@@ -354,9 +384,7 @@
             const nuance = $('#newClientNuance').val().trim();
             const oxi = $('#newClientOxi').val().trim();
             const notes = $('#newClientNotes').val().trim();
-
             if(!name || !surname) return alert("Nome mancante");
-            
             const combined = `${type} ${nuance} ${oxi}`.trim();
             await addDoc(collection(db, "clients"), {
                 firstName: name, lastName: surname,
@@ -374,7 +402,6 @@
             const nuance = $('#addWorkNuance').val().trim();
             const oxi = $('#addWorkOxi').val().trim();
             const notes = $('#addWorkNotes').val().trim();
-            
             const combined = `${type} ${nuance} ${oxi}`.trim();
             await updateDoc(doc(db, "clients", currentClientId), {
                 lastColoration: combined, lastVisitDate: date,
