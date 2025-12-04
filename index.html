@@ -5,31 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionale Parrucchiere</title>
     
-    <!-- Bootstrap CSS (Grafica) -->
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Icone Bootstrap -->
+    <!-- Icone -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     
     <style>
-        body { background-color: #f8f9fa; }
-        .client-card { cursor: pointer; transition: transform 0.2s; }
-        .client-card:hover { transform: translateY(-5px); border-color: #0d6efd; }
-        .history-timeline { border-left: 2px solid #ddd; padding-left: 20px; margin-left: 10px; }
-        .history-item { margin-bottom: 20px; position: relative; }
-        .history-item::before {
-            content: ''; position: absolute; left: -25px; top: 5px;
-            width: 10px; height: 10px; background: #0d6efd; border-radius: 50%;
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+        .client-card { 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            border: none;
+            border-left: 5px solid #0d6efd;
         }
+        .client-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        
+        .history-timeline { border-left: 2px solid #e9ecef; padding-left: 20px; margin-left: 10px; }
+        .history-item { margin-bottom: 25px; position: relative; }
+        .history-item::before {
+            content: ''; position: absolute; left: -26px; top: 5px;
+            width: 12px; height: 12px; background: #0d6efd; border-radius: 50%; border: 2px solid #fff;
+        }
+        .modal-header { background-color: #0d6efd; color: white; }
+        .btn-close { filter: invert(1); }
     </style>
 </head>
 <body>
 
     <!-- Navbar -->
-    <nav class="navbar navbar-dark bg-primary mb-4">
+    <nav class="navbar navbar-dark bg-primary mb-4 shadow">
         <div class="container">
             <span class="navbar-brand mb-0 h1"><i class="bi bi-scissors"></i> Color Manager</span>
-            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#newClientModal">
-                <i class="bi bi-person-plus"></i> Nuovo Cliente
+            <button class="btn btn-light text-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#newClientModal">
+                <i class="bi bi-plus-lg"></i> Nuovo Lavoro/Cliente
             </button>
         </div>
     </nav>
@@ -37,15 +45,18 @@
     <!-- Main Content -->
     <div class="container">
         <!-- Cerca -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="Cerca cliente per nome...">
+        <div class="row mb-4 justify-content-center">
+            <div class="col-md-8">
+                <div class="input-group input-group-lg shadow-sm">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Cerca cliente...">
+                </div>
             </div>
         </div>
 
-        <!-- Lista Clienti (Verrà riempita da jQuery) -->
+        <!-- Lista Clienti -->
         <div id="clientsList" class="row g-3">
-            <div class="text-center mt-5"><div class="spinner-border text-primary"></div><p>Caricamento...</p></div>
+            <div class="text-center mt-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Caricamento database...</p></div>
         </div>
     </div>
 
@@ -53,32 +64,38 @@
     <div class="modal fade" id="clientModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-light">
-                    <h5 class="modal-title" id="modalClientName">Nome Cliente</h5>
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="modalClientName">Scheda Cliente</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <!-- Form per Nuova Colorazione -->
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-primary text-white">Aggiungi Nuova Tinta</div>
+                <div class="modal-body bg-light">
+                    
+                    <!-- Form per Nuova Colorazione (Dentro il dettaglio) -->
+                    <div class="card mb-4 border-0 shadow-sm">
                         <div class="card-body">
+                            <h6 class="card-title text-primary mb-3"><i class="bi bi-plus-circle"></i> Aggiungi Lavoro Oggi</h6>
                             <div class="row g-2">
-                                <div class="col-md-8">
-                                    <input type="text" id="newColorFormula" class="form-control" placeholder="Es: 6.0 + 20 vol">
-                                </div>
                                 <div class="col-md-4">
-                                    <button id="btnAddColor" class="btn btn-primary w-100">Salva Tinta</button>
+                                    <label class="small text-muted">Data</label>
+                                    <input type="date" id="addWorkDate" class="form-control">
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="small text-muted">Prodotti / Formula</label>
+                                    <input type="text" id="addWorkFormula" class="form-control" placeholder="Es: Colore 6.0 + 20vol">
                                 </div>
                                 <div class="col-12">
-                                    <textarea id="newColorNotes" class="form-control form-control-sm mt-2" placeholder="Note aggiuntive (opzionale)"></textarea>
+                                    <input type="text" id="addWorkNotes" class="form-control form-control-sm" placeholder="Note (facoltativo)">
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <button id="btnSaveExistingWork" class="btn btn-primary w-100">Salva nel Dettaglio</button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Storico -->
-                    <h6>Storico Colorazioni</h6>
-                    <div id="historyList" class="history-timeline mt-3">
+                    <h6 class="mb-3 ps-2 border-start border-4 border-primary">Storico Trattamenti</h6>
+                    <div id="historyList" class="history-timeline bg-white p-3 rounded shadow-sm">
                         <!-- Lo storico verrà inserito qui -->
                     </div>
                 </div>
@@ -86,43 +103,61 @@
         </div>
     </div>
 
-    <!-- MODAL: Nuovo Cliente -->
+    <!-- MODAL: Nuovo Cliente (E PRIMO LAVORO) -->
     <div class="modal fade" id="newClientModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Nuovo Cliente</h5>
+                    <h5 class="modal-title">Nuovo inserimento</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="text" id="inputFirstName" class="form-control mb-2" placeholder="Nome">
-                    <input type="text" id="inputLastName" class="form-control mb-2" placeholder="Cognome">
+                    <p class="small text-muted mb-3">Compila i dati per creare la scheda e salvare il primo lavoro.</p>
+                    
+                    <div class="row g-2">
+                        <!-- Dati Anagrafici -->
+                        <div class="col-6">
+                            <label class="form-label fw-bold small">Nome</label>
+                            <input type="text" id="newClientName" class="form-control" placeholder="Nome">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold small">Cognome</label>
+                            <input type="text" id="newClientSurname" class="form-control" placeholder="Cognome">
+                        </div>
+
+                        <hr class="my-3 text-muted">
+
+                        <!-- Dati Primo Lavoro -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold small">Data Lavoro</label>
+                            <input type="date" id="newClientDate" class="form-control">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold small">Prodotti usati / Formula</label>
+                            <textarea id="newClientFormula" class="form-control" rows="2" placeholder="Es: Tubo 7.1, Ossigeno 20 vol..."></textarea>
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="btnSaveClient">Salva</button>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="button" class="btn btn-success px-4" id="btnSaveNewClient">Salva Tutto</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- IMPORTANTE: Librerie Esterne (Devono stare PRIMA del codice Firebase) -->
+    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Script Logica Firebase -->
     <script type="module">
-        // ---------------------------------------------------------
-        // 1. CONFIGURAZIONE 
-        // ---------------------------------------------------------
-        
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, arrayUnion, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // CONFIGURAZIONE CORRETTA
-        // Qui mappiamo $ su window.jQuery per evitare errori nel modulo
         const $ = window.jQuery; 
 
-        // I tuoi dati di configurazione (NON MODIFICARE SE NON CAMBI PROGETTO)
+        // CONFIGURAZIONE (Non toccare se non cambi progetto)
         const firebaseConfig = {
             apiKey: "AIzaSyA3c5MmceX4gnd1IoZS-pEwSwKEhs-TaKU",
             authDomain: "mabo-75945.firebaseapp.com",
@@ -132,18 +167,20 @@
             appId: "1:296320402452:web:d959d63cbfa51f46f05301"
         };
 
-        // Avvio app
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         let currentClientId = null;
         let allClientsData = []; 
 
-        // ---------------------------------------------------------
-        // 2. LOGICA APPLICAZIONE
-        // ---------------------------------------------------------
+        // Impostiamo la data di oggi come default nei campi data
+        const today = new Date().toISOString().split('T')[0];
+        $('#newClientDate').val(today);
+        $('#addWorkDate').val(today);
 
-        // Ascoltatore Database (Real-time)
+        // ---------------------------------------------------------
+        // LETTURA DATI (REAL-TIME)
+        // ---------------------------------------------------------
         const q = query(collection(db, "clients"), orderBy("lastVisitDate", "desc"));
         
         onSnapshot(q, (snapshot) => {
@@ -158,51 +195,65 @@
             });
 
             if(allClientsData.length === 0) {
-                $('#clientsList').html('<div class="col-12 text-center text-muted">Nessun cliente trovato. Aggiungine uno!</div>');
+                $('#clientsList').html(`
+                    <div class="col-12 text-center text-muted py-5">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p class="mt-2">Il database è vuoto.<br>Clicca su "Nuovo Lavoro/Cliente" in alto.</p>
+                    </div>
+                `);
             }
         }, (error) => {
-            console.error("Errore Database:", error);
-            $('#clientsList').html(`<div class="alert alert-danger">Errore accesso DB: ${error.code}. <br>Assicurati di avere una connessione internet e che il DB sia attivo.</div>`);
+            console.error("Errore:", error);
+            $('#clientsList').html(`<div class="alert alert-danger">
+                <strong>Errore di connessione!</strong><br>
+                1. Controlla la connessione internet.<br>
+                2. Verifica di aver impostato le <strong>Regole</strong> su Firebase in "Test Mode".
+            </div>`);
         });
 
-        // Disegna la Card Cliente
+        // Disegna la Card nella lista
         function renderClientCard(client) {
-            const lastColor = client.lastColoration || "Nessuna colorazione registrata";
-            const lastDate = client.lastVisitDate || "";
+            const lastColor = client.lastColoration || "Nessun dato";
+            // Formattiamo la data per renderla leggibile (da aaaa-mm-gg a gg/mm/aaaa)
+            let formattedDate = "";
+            if(client.lastVisitDate) {
+                const parts = client.lastVisitDate.split('-');
+                formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
             
             const html = `
                 <div class="col-md-4 col-sm-6 item-client" data-name="${client.firstName} ${client.lastName}">
-                    <div class="card client-card h-100 shadow-sm" id="client-${client.id}">
+                    <div class="card client-card h-100 shadow-sm bg-white" id="client-${client.id}">
                         <div class="card-body">
-                            <h5 class="card-title fw-bold">${client.firstName} ${client.lastName}</h5>
-                            <p class="card-text text-muted small mb-1">Ultima tinta:</p>
-                            <p class="card-text fw-medium text-primary">${lastColor}</p>
-                            <small class="text-secondary float-end">${lastDate}</small>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title fw-bold mb-0 text-dark">${client.firstName} ${client.lastName}</h5>
+                                <span class="badge bg-light text-secondary border">${formattedDate}</span>
+                            </div>
+                            <p class="card-text text-muted small mb-1 text-uppercase fw-bold" style="font-size: 0.7rem;">Ultimo lavoro:</p>
+                            <p class="card-text text-primary">${lastColor}</p>
                         </div>
                     </div>
                 </div>
             `;
             $('#clientsList').append(html);
-            // Gestione click con jQuery
+            
             $(`#client-${client.id}`).on('click', function() {
                 openClientDetails(client);
             });
         }
 
-        // Ricerca
-        $('#searchInput').on('keyup', function() {
-            const val = $(this).val().toLowerCase();
-            $('.item-client').filter(function() {
-                $(this).toggle($(this).attr('data-name').toLowerCase().indexOf(val) > -1)
-            });
-        });
+        // ---------------------------------------------------------
+        // GESTIONE MODALI E DETTAGLI
+        // ---------------------------------------------------------
 
-        // Dettaglio Cliente
         function openClientDetails(client) {
             currentClientId = client.id;
             $('#modalClientName').text(`${client.firstName} ${client.lastName}`);
-            $('#newColorFormula').val(''); 
-            $('#newColorNotes').val('');
+            
+            // Resetta form aggiunta rapida
+            $('#addWorkFormula').val(''); 
+            $('#addWorkNotes').val('');
+            $('#addWorkDate').val(new Date().toISOString().split('T')[0]);
             
             renderHistory(client.history || []);
             
@@ -211,94 +262,134 @@
             modal.show();
         }
 
-        // Disegna Storico
         function renderHistory(historyArray) {
             $('#historyList').empty();
-            // Ordina per data decrescente
             const sortedHistory = historyArray.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             if(sortedHistory.length === 0) {
-                $('#historyList').html('<p class="text-muted">Nessuno storico disponibile.</p>');
+                $('#historyList').html('<p class="text-muted fst-italic">Nessuno storico disponibile.</p>');
                 return;
             }
 
             sortedHistory.forEach(item => {
+                // Formatta data
+                const dateParts = item.date ? item.date.split('-') : ['','',''];
+                const niceDate = item.date ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : 'N/D';
+
                 const html = `
                     <div class="history-item">
-                        <div class="fw-bold">${item.date}</div>
-                        <div class="text-dark">${item.formula}</div>
-                        ${item.notes ? `<div class="text-muted small"><em>Note: ${item.notes}</em></div>` : ''}
+                        <div class="fw-bold text-dark mb-1">${niceDate}</div>
+                        <div class="p-2 bg-light rounded border">
+                            <div class="fw-semibold text-primary">${item.formula}</div>
+                            ${item.notes ? `<div class="text-secondary small mt-1"><i class="bi bi-sticky"></i> ${item.notes}</div>` : ''}
+                        </div>
                     </div>
                 `;
                 $('#historyList').append(html);
             });
         }
 
+        // Ricerca veloce
+        $('#searchInput').on('keyup', function() {
+            const val = $(this).val().toLowerCase();
+            $('.item-client').filter(function() {
+                $(this).toggle($(this).attr('data-name').toLowerCase().indexOf(val) > -1)
+            });
+        });
+
         // ---------------------------------------------------------
-        // 3. AZIONI
+        // SALVATAGGIO DATI
         // ---------------------------------------------------------
 
-        // Salva Nuovo Cliente
-        // Nota: Qui usiamo document.getElementById per evitare conflitti, jQuery va bene dentro
-        document.getElementById('btnSaveClient').addEventListener('click', async () => {
-            const first = $('#inputFirstName').val();
-            const last = $('#inputLastName').val();
-            
-            if(!first || !last) {
-                alert("Inserisci nome e cognome");
-                return;
-            }
+        // 1. SALVA NUOVO CLIENTE + PRIMO LAVORO
+        document.getElementById('btnSaveNewClient').addEventListener('click', async () => {
+            const name = $('#newClientName').val().trim();
+            const surname = $('#newClientSurname').val().trim();
+            const date = $('#newClientDate').val();
+            const formula = $('#newClientFormula').val().trim();
+
+            if(!name || !surname) { alert("Nome e Cognome servono per ritrovare la scheda in futuro."); return; }
+            if(!formula) { alert("Inserisci i prodotti utilizzati."); return; }
+            if(!date) { alert("Inserisci la data."); return; }
+
+            // Animazione bottone
+            const btn = $('#btnSaveNewClient');
+            const originalText = btn.text();
+            btn.prop('disabled', true).text('Salvataggio...');
 
             try {
+                // Creiamo il cliente già con lo storico dentro
                 await addDoc(collection(db, "clients"), {
-                    firstName: first,
-                    lastName: last,
-                    lastColoration: "Nuovo Cliente",
-                    lastVisitDate: new Date().toISOString().split('T')[0],
-                    history: []
+                    firstName: name,
+                    lastName: surname,
+                    lastColoration: formula, // Diventa l'ultima visualizzata
+                    lastVisitDate: date,
+                    history: [
+                        {
+                            date: date,
+                            formula: formula,
+                            notes: "Prima visita (inserimento manuale)"
+                        }
+                    ]
                 });
                 
-                // Chiudi modale usando le API native di Bootstrap
+                // Chiudi e pulisci
                 const modalEl = document.getElementById('newClientModal');
-                const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
                 modalInstance.hide();
                 
-                // Pulisci i campi
-                $('#inputFirstName').val('');
-                $('#inputLastName').val('');
+                $('#newClientName').val('');
+                $('#newClientSurname').val('');
+                $('#newClientFormula').val('');
                 
             } catch (e) {
                 console.error(e);
-                alert("Errore salvataggio: " + e.message);
+                alert("Errore: " + e.message);
+            } finally {
+                btn.prop('disabled', false).text(originalText);
             }
         });
 
-        // Salva Nuova Tinta
-        document.getElementById('btnAddColor').addEventListener('click', async () => {
+        // 2. AGGIUNGI LAVORO A CLIENTE ESISTENTE
+        document.getElementById('btnSaveExistingWork').addEventListener('click', async () => {
             if(!currentClientId) return;
             
-            const formula = $('#newColorFormula').val();
-            const notes = $('#newColorNotes').val();
-            const today = new Date().toISOString().split('T')[0];
+            const date = $('#addWorkDate').val();
+            const formula = $('#addWorkFormula').val().trim();
+            const notes = $('#addWorkNotes').val().trim();
 
-            if(!formula) {
-                alert("Scrivi la formula!");
-                return;
-            }
+            if(!formula) { alert("Scrivi i prodotti usati!"); return; }
+            if(!date) { alert("Data mancante"); return; }
+
+            const btn = $('#btnSaveExistingWork');
+            btn.prop('disabled', true).text('...');
 
             const clientRef = doc(db, "clients", currentClientId);
 
             try {
+                // Aggiorna "copertina" e aggiungi a storico
                 await updateDoc(clientRef, {
                     lastColoration: formula,
-                    lastVisitDate: today,
+                    lastVisitDate: date,
                     history: arrayUnion({
-                        date: today,
+                        date: date,
                         formula: formula,
                         notes: notes
                     })
                 });
                 
+                // Chiudiamo il modale grande per mostrare che ha fatto
                 const modalEl = document.getElementById('clientModal');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl);
                 modalInstance.hide();
+                
+            } catch (e) {
+                alert("Errore: " + e.message);
+            } finally {
+                btn.prop('disabled', false).text('Salva nel Dettaglio');
+            }
+        });
+
+    </script>
+</body>
+</html>
