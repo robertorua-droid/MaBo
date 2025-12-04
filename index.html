@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionale Parrucchiere</title>
+    <!-- Evita l'errore 404 della favicon -->
+    <link rel="icon" href="data:,">
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -161,7 +163,6 @@
 
     <!-- Script Logica Firebase -->
     <script type="module">
-        // NOTA: Ho aggiunto "getDocs" agli import per poter scaricare tutto insieme
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, arrayUnion, onSnapshot, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -207,13 +208,13 @@
                 $('#clientsList').html(`
                     <div class="col-12 text-center text-muted py-5">
                         <i class="bi bi-inbox fs-1"></i>
-                        <p class="mt-2">Il database è vuoto.<br>Clicca su "Nuovo Lavoro/Cliente" in alto.</p>
+                        <p class="mt-2">Il database è vuoto o non accessibile.<br>Verifica le regole di Firestore.</p>
                     </div>
                 `);
             }
         }, (error) => {
-            console.error("Errore:", error);
-            $('#clientsList').html(`<div class="alert alert-danger">Errore di connessione al Database.</div>`);
+            console.error("Errore Database:", error);
+            $('#clientsList').html(`<div class="alert alert-danger">Errore di connessione al Database. ${error.message}</div>`);
         });
 
         // Render Card
@@ -325,3 +326,83 @@
                 a.download = `backup_parrucchiere_${new Date().toISOString().split('T')[0]}.json`;
                 document.body.appendChild(a);
                 a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url); // Pulizia memoria
+
+            } catch (e) {
+                console.error(e);
+                alert("Errore durante il backup: " + e.message);
+            }
+        });
+
+        // 1. SALVA NUOVO CLIENTE
+        document.getElementById('btnSaveNewClient').addEventListener('click', async () => {
+            const name = $('#newClientName').val().trim();
+            const surname = $('#newClientSurname').val().trim();
+            const date = $('#newClientDate').val();
+            const formula = $('#newClientFormula').val().trim();
+
+            if(!name || !surname) { alert("Nome e Cognome obbligatori"); return; }
+            if(!formula) { alert("Prodotti mancanti"); return; }
+            if(!date) { alert("Data mancante"); return; }
+
+            const btn = $('#btnSaveNewClient');
+            btn.prop('disabled', true).text('Attendere...');
+
+            try {
+                await addDoc(collection(db, "clients"), {
+                    firstName: name,
+                    lastName: surname,
+                    lastColoration: formula,
+                    lastVisitDate: date,
+                    history: [{ date: date, formula: formula, notes: "Prima visita" }]
+                });
+                
+                const modalEl = document.getElementById('newClientModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                modalInstance.hide();
+                
+                $('#newClientName').val('');
+                $('#newClientSurname').val('');
+                $('#newClientFormula').val('');
+                
+            } catch (e) {
+                alert("Errore: " + e.message);
+            } finally {
+                btn.prop('disabled', false).text('Salva Tutto');
+            }
+        });
+
+        // 2. SALVA LAVORO ESISTENTE
+        document.getElementById('btnSaveExistingWork').addEventListener('click', async () => {
+            if(!currentClientId) return;
+            const date = $('#addWorkDate').val();
+            const formula = $('#addWorkFormula').val().trim();
+            const notes = $('#addWorkNotes').val().trim();
+
+            if(!formula) { alert("Scrivi i prodotti usati!"); return; }
+            if(!date) { alert("Data mancante"); return; }
+
+            const btn = $('#btnSaveExistingWork');
+            btn.prop('disabled', true).text('...');
+
+            try {
+                const clientRef = doc(db, "clients", currentClientId);
+                await updateDoc(clientRef, {
+                    lastColoration: formula,
+                    lastVisitDate: date,
+                    history: arrayUnion({ date: date, formula: formula, notes: notes })
+                });
+                const modalEl = document.getElementById('clientModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                modalInstance.hide();
+            } catch (e) {
+                alert("Errore: " + e.message);
+            } finally {
+                btn.prop('disabled', false).text('Salva nel Dettaglio');
+            }
+        });
+
+    </script>
+</body>
+</html>
