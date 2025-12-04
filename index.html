@@ -36,9 +36,18 @@
     <nav class="navbar navbar-dark bg-primary mb-4 shadow">
         <div class="container">
             <span class="navbar-brand mb-0 h1"><i class="bi bi-scissors"></i> Color Manager</span>
-            <button class="btn btn-light text-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#newClientModal">
-                <i class="bi bi-plus-lg"></i> Nuovo Lavoro/Cliente
-            </button>
+            
+            <div class="d-flex gap-2">
+                <!-- Pulsante Backup -->
+                <button class="btn btn-outline-light btn-sm" id="btnExportData" title="Scarica una copia dei dati">
+                    <i class="bi bi-download"></i> Backup
+                </button>
+                
+                <!-- Pulsante Nuovo -->
+                <button class="btn btn-light text-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#newClientModal">
+                    <i class="bi bi-plus-lg"></i> Nuovo Cliente
+                </button>
+            </div>
         </div>
     </nav>
 
@@ -70,7 +79,7 @@
                 </div>
                 <div class="modal-body bg-light">
                     
-                    <!-- Form per Nuova Colorazione (Dentro il dettaglio) -->
+                    <!-- Form per Nuova Colorazione -->
                     <div class="card mb-4 border-0 shadow-sm">
                         <div class="card-body">
                             <h6 class="card-title text-primary mb-3"><i class="bi bi-plus-circle"></i> Aggiungi Lavoro Oggi</h6>
@@ -152,12 +161,13 @@
 
     <!-- Script Logica Firebase -->
     <script type="module">
+        // NOTA: Ho aggiunto "getDocs" agli import per poter scaricare tutto insieme
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, doc, updateDoc, arrayUnion, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, updateDoc, arrayUnion, onSnapshot, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const $ = window.jQuery; 
 
-        // CONFIGURAZIONE (Non toccare se non cambi progetto)
+        // CONFIGURAZIONE
         const firebaseConfig = {
             apiKey: "AIzaSyA3c5MmceX4gnd1IoZS-pEwSwKEhs-TaKU",
             authDomain: "mabo-75945.firebaseapp.com",
@@ -173,7 +183,6 @@
         let currentClientId = null;
         let allClientsData = []; 
 
-        // Impostiamo la data di oggi come default nei campi data
         const today = new Date().toISOString().split('T')[0];
         $('#newClientDate').val(today);
         $('#addWorkDate').val(today);
@@ -204,17 +213,12 @@
             }
         }, (error) => {
             console.error("Errore:", error);
-            $('#clientsList').html(`<div class="alert alert-danger">
-                <strong>Errore di connessione!</strong><br>
-                1. Controlla la connessione internet.<br>
-                2. Verifica di aver impostato le <strong>Regole</strong> su Firebase in "Test Mode".
-            </div>`);
+            $('#clientsList').html(`<div class="alert alert-danger">Errore di connessione al Database.</div>`);
         });
 
-        // Disegna la Card nella lista
+        // Render Card
         function renderClientCard(client) {
             const lastColor = client.lastColoration || "Nessun dato";
-            // Formattiamo la data per renderla leggibile (da aaaa-mm-gg a gg/mm/aaaa)
             let formattedDate = "";
             if(client.lastVisitDate) {
                 const parts = client.lastVisitDate.split('-');
@@ -236,21 +240,15 @@
                 </div>
             `;
             $('#clientsList').append(html);
-            
-            $(`#client-${client.id}`).on('click', function() {
-                openClientDetails(client);
-            });
+            $(`#client-${client.id}`).on('click', () => openClientDetails(client));
         }
 
         // ---------------------------------------------------------
-        // GESTIONE MODALI E DETTAGLI
+        // GESTIONE MODALI
         // ---------------------------------------------------------
-
         function openClientDetails(client) {
             currentClientId = client.id;
             $('#modalClientName').text(`${client.firstName} ${client.lastName}`);
-            
-            // Resetta form aggiunta rapida
             $('#addWorkFormula').val(''); 
             $('#addWorkNotes').val('');
             $('#addWorkDate').val(new Date().toISOString().split('T')[0]);
@@ -272,7 +270,6 @@
             }
 
             sortedHistory.forEach(item => {
-                // Formatta data
                 const dateParts = item.date ? item.date.split('-') : ['','',''];
                 const niceDate = item.date ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : 'N/D';
 
@@ -289,7 +286,6 @@
             });
         }
 
-        // Ricerca veloce
         $('#searchInput').on('keyup', function() {
             const val = $(this).val().toLowerCase();
             $('.item-client').filter(function() {
@@ -298,98 +294,34 @@
         });
 
         // ---------------------------------------------------------
-        // SALVATAGGIO DATI
+        // SALVATAGGIO & EXPORT
         // ---------------------------------------------------------
 
-        // 1. SALVA NUOVO CLIENTE + PRIMO LAVORO
-        document.getElementById('btnSaveNewClient').addEventListener('click', async () => {
-            const name = $('#newClientName').val().trim();
-            const surname = $('#newClientSurname').val().trim();
-            const date = $('#newClientDate').val();
-            const formula = $('#newClientFormula').val().trim();
-
-            if(!name || !surname) { alert("Nome e Cognome servono per ritrovare la scheda in futuro."); return; }
-            if(!formula) { alert("Inserisci i prodotti utilizzati."); return; }
-            if(!date) { alert("Inserisci la data."); return; }
-
-            // Animazione bottone
-            const btn = $('#btnSaveNewClient');
-            const originalText = btn.text();
-            btn.prop('disabled', true).text('Salvataggio...');
+        // EXPORT DATI (BACKUP)
+        document.getElementById('btnExportData').addEventListener('click', async () => {
+            if(!confirm("Vuoi scaricare un backup completo di tutti i clienti?")) return;
 
             try {
-                // Creiamo il cliente già con lo storico dentro
-                await addDoc(collection(db, "clients"), {
-                    firstName: name,
-                    lastName: surname,
-                    lastColoration: formula, // Diventa l'ultima visualizzata
-                    lastVisitDate: date,
-                    history: [
-                        {
-                            date: date,
-                            formula: formula,
-                            notes: "Prima visita (inserimento manuale)"
-                        }
-                    ]
+                // Leggiamo tutto il database una tantum
+                const qExport = query(collection(db, "clients"));
+                const querySnapshot = await getDocs(qExport);
+                
+                let exportData = [];
+                querySnapshot.forEach((doc) => {
+                    exportData.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
                 });
+
+                // Creiamo il file JSON
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
                 
-                // Chiudi e pulisci
-                const modalEl = document.getElementById('newClientModal');
-                const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                modalInstance.hide();
-                
-                $('#newClientName').val('');
-                $('#newClientSurname').val('');
-                $('#newClientFormula').val('');
-                
-            } catch (e) {
-                console.error(e);
-                alert("Errore: " + e.message);
-            } finally {
-                btn.prop('disabled', false).text(originalText);
-            }
-        });
-
-        // 2. AGGIUNGI LAVORO A CLIENTE ESISTENTE
-        document.getElementById('btnSaveExistingWork').addEventListener('click', async () => {
-            if(!currentClientId) return;
-            
-            const date = $('#addWorkDate').val();
-            const formula = $('#addWorkFormula').val().trim();
-            const notes = $('#addWorkNotes').val().trim();
-
-            if(!formula) { alert("Scrivi i prodotti usati!"); return; }
-            if(!date) { alert("Data mancante"); return; }
-
-            const btn = $('#btnSaveExistingWork');
-            btn.prop('disabled', true).text('...');
-
-            const clientRef = doc(db, "clients", currentClientId);
-
-            try {
-                // Aggiorna "copertina" e aggiungi a storico
-                await updateDoc(clientRef, {
-                    lastColoration: formula,
-                    lastVisitDate: date,
-                    history: arrayUnion({
-                        date: date,
-                        formula: formula,
-                        notes: notes
-                    })
-                });
-                
-                // Chiudiamo il modale grande per mostrare che ha fatto
-                const modalEl = document.getElementById('clientModal');
-                const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                modalInstance.hide();
-                
-            } catch (e) {
-                alert("Errore: " + e.message);
-            } finally {
-                btn.prop('disabled', false).text('Salva nel Dettaglio');
-            }
-        });
-
-    </script>
-</body>
-</html>
+                // Creiamo un link invisibile per scaricarlo
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_parrucchiere_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
