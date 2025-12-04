@@ -108,13 +108,17 @@
    <!-- Script Logica Firebase -->
     <script type="module">
         // ---------------------------------------------------------
-        // 1. CONFIGURAZIONE FIREBASE
+        // 1. CONFIGURAZIONE 
         // ---------------------------------------------------------
-        // Usiamo i link CDN per il browser, non quelli di Node.js
+        
+        // Importiamo Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, arrayUnion, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // CONFIGURAZIONE CORRETTA (I tuoi dati)
+        // *** CORREZIONE JQUERY: Rendiamo esplicito $ ***
+        const $ = window.jQuery; 
+
+        // I tuoi dati di configurazione
         const firebaseConfig = {
             apiKey: "AIzaSyA3c5MmceX4gnd1IoZS-pEwSwKEhs-TaKU",
             authDomain: "mabo-75945.firebaseapp.com",
@@ -124,11 +128,10 @@
             appId: "1:296320402452:web:d959d63cbfa51f46f05301"
         };
 
-        // Inizializza l'app
+        // Avvio app
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Variabile globale per sapere quale cliente stiamo guardando
         let currentClientId = null;
         let allClientsData = []; 
 
@@ -136,8 +139,7 @@
         // 2. LOGICA APPLICAZIONE
         // ---------------------------------------------------------
 
-        // Caricamento iniziale Clienti (Real-time)
-        // Nota: Assicurati di aver creato il database su Firebase Console in "Test Mode"
+        // Ascoltatore Database (Real-time)
         const q = query(collection(db, "clients"), orderBy("lastVisitDate", "desc"));
         
         onSnapshot(q, (snapshot) => {
@@ -152,14 +154,15 @@
             });
 
             if(allClientsData.length === 0) {
-                $('#clientsList').html('<div class="col-12 text-center text-muted">Nessun cliente trovato. Prova ad aggiungerne uno!</div>');
+                $('#clientsList').html('<div class="col-12 text-center text-muted">Nessun cliente trovato. Aggiungine uno!</div>');
             }
         }, (error) => {
-            console.error("Errore lettura:", error);
-            $('#clientsList').html('<div class="alert alert-danger">Errore di connessione al Database. Controlla la console (F12) per i dettagli.</div>');
+            console.error("Errore Database:", error);
+            // Se vedi questo messaggio, controlla di aver creato il DB in Test Mode
+            $('#clientsList').html(`<div class="alert alert-danger">Errore accesso DB: ${error.code}. <br>Hai creato il database su Firebase Console in "Test Mode"?</div>`);
         });
 
-        // Funzione per disegnare la Card Cliente
+        // Disegna la Card Cliente
         function renderClientCard(client) {
             const lastColor = client.lastColoration || "Nessuna colorazione registrata";
             const lastDate = client.lastVisitDate || "";
@@ -180,7 +183,7 @@
             $(`#client-${client.id}`).click(() => openClientDetails(client));
         }
 
-        // Ricerca cliente
+        // Ricerca
         $('#searchInput').on('keyup', function() {
             const val = $(this).val().toLowerCase();
             $('.item-client').filter(function() {
@@ -188,7 +191,7 @@
             });
         });
 
-        // Apertura Modale Dettaglio
+        // Dettaglio Cliente
         function openClientDetails(client) {
             currentClientId = client.id;
             $('#modalClientName').text(`${client.firstName} ${client.lastName}`);
@@ -201,7 +204,7 @@
             modal.show();
         }
 
-        // Render Storico
+        // Disegna Storico
         function renderHistory(historyArray) {
             $('#historyList').empty();
             const sortedHistory = historyArray.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -224,14 +227,19 @@
         }
 
         // ---------------------------------------------------------
-        // 3. AZIONI (Salvataggio dati)
+        // 3. AZIONI
         // ---------------------------------------------------------
 
         // Salva Nuovo Cliente
-        $('#btnSaveClient').click(async () => {
+        // Nota: usiamo window.$ dentro gli event handler per sicurezza o la variabile definita sopra
+        document.getElementById('btnSaveClient').addEventListener('click', async () => {
             const first = $('#inputFirstName').val();
             const last = $('#inputLastName').val();
-            if(!first || !last) return alert("Inserisci nome e cognome");
+            
+            if(!first || !last) {
+                alert("Inserisci nome e cognome");
+                return;
+            }
 
             try {
                 await addDoc(collection(db, "clients"), {
@@ -242,6 +250,7 @@
                     history: []
                 });
                 
+                // Chiudi modale
                 const modalEl = document.getElementById('newClientModal');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                 modalInstance.hide();
@@ -251,19 +260,22 @@
                 
             } catch (e) {
                 console.error(e);
-                alert("Errore salvataggio (vedi console): " + e.message);
+                alert("Errore salvataggio: " + e.message);
             }
         });
 
         // Salva Nuova Tinta
-        $('#btnAddColor').click(async () => {
+        document.getElementById('btnAddColor').addEventListener('click', async () => {
             if(!currentClientId) return;
             
             const formula = $('#newColorFormula').val();
             const notes = $('#newColorNotes').val();
             const today = new Date().toISOString().split('T')[0];
 
-            if(!formula) return alert("Scrivi la formula!");
+            if(!formula) {
+                alert("Scrivi la formula!");
+                return;
+            }
 
             const clientRef = doc(db, "clients", currentClientId);
 
