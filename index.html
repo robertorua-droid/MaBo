@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionale Parrucchiere</title>
     
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap CSS (Grafica) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Icone Bootstrap -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -105,20 +105,24 @@
         </div>
     </div>
 
-   <!-- Script Logica Firebase -->
+    <!-- IMPORTANTE: Librerie Esterne (Devono stare PRIMA del codice Firebase) -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Script Logica Firebase -->
     <script type="module">
         // ---------------------------------------------------------
         // 1. CONFIGURAZIONE 
         // ---------------------------------------------------------
         
-        // Importiamo Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, arrayUnion, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // *** CORREZIONE JQUERY: Rendiamo esplicito $ ***
+        // CONFIGURAZIONE CORRETTA
+        // Qui mappiamo $ su window.jQuery per evitare errori nel modulo
         const $ = window.jQuery; 
 
-        // I tuoi dati di configurazione
+        // I tuoi dati di configurazione (NON MODIFICARE SE NON CAMBI PROGETTO)
         const firebaseConfig = {
             apiKey: "AIzaSyA3c5MmceX4gnd1IoZS-pEwSwKEhs-TaKU",
             authDomain: "mabo-75945.firebaseapp.com",
@@ -158,8 +162,7 @@
             }
         }, (error) => {
             console.error("Errore Database:", error);
-            // Se vedi questo messaggio, controlla di aver creato il DB in Test Mode
-            $('#clientsList').html(`<div class="alert alert-danger">Errore accesso DB: ${error.code}. <br>Hai creato il database su Firebase Console in "Test Mode"?</div>`);
+            $('#clientsList').html(`<div class="alert alert-danger">Errore accesso DB: ${error.code}. <br>Assicurati di avere una connessione internet e che il DB sia attivo.</div>`);
         });
 
         // Disegna la Card Cliente
@@ -180,7 +183,10 @@
                 </div>
             `;
             $('#clientsList').append(html);
-            $(`#client-${client.id}`).click(() => openClientDetails(client));
+            // Gestione click con jQuery
+            $(`#client-${client.id}`).on('click', function() {
+                openClientDetails(client);
+            });
         }
 
         // Ricerca
@@ -200,13 +206,15 @@
             
             renderHistory(client.history || []);
             
-            const modal = new bootstrap.Modal(document.getElementById('clientModal'));
+            const modalEl = document.getElementById('clientModal');
+            const modal = new bootstrap.Modal(modalEl);
             modal.show();
         }
 
         // Disegna Storico
         function renderHistory(historyArray) {
             $('#historyList').empty();
+            // Ordina per data decrescente
             const sortedHistory = historyArray.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             if(sortedHistory.length === 0) {
@@ -231,7 +239,7 @@
         // ---------------------------------------------------------
 
         // Salva Nuovo Cliente
-        // Nota: usiamo window.$ dentro gli event handler per sicurezza o la variabile definita sopra
+        // Nota: Qui usiamo document.getElementById per evitare conflitti, jQuery va bene dentro
         document.getElementById('btnSaveClient').addEventListener('click', async () => {
             const first = $('#inputFirstName').val();
             const last = $('#inputLastName').val();
@@ -250,11 +258,12 @@
                     history: []
                 });
                 
-                // Chiudi modale
+                // Chiudi modale usando le API native di Bootstrap
                 const modalEl = document.getElementById('newClientModal');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                 modalInstance.hide();
                 
+                // Pulisci i campi
                 $('#inputFirstName').val('');
                 $('#inputLastName').val('');
                 
@@ -293,13 +302,3 @@
                 const modalEl = document.getElementById('clientModal');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl);
                 modalInstance.hide();
-                
-            } catch (e) {
-                console.error(e);
-                alert("Errore aggiornamento: " + e.message);
-            }
-        });
-
-    </script>
-</body>
-</html>
