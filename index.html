@@ -30,6 +30,10 @@
         }
         .modal-header { background-color: #0d6efd; color: white; }
         .btn-close { filter: invert(1); }
+        
+        /* Stile per i badge dello storico */
+        .badge-type { background-color: #e7f1ff; color: #0d6efd; border: 1px solid #cff4fc; }
+        .badge-oxi { background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; }
     </style>
 </head>
 <body>
@@ -81,23 +85,33 @@
                 </div>
                 <div class="modal-body bg-light">
                     
-                    <!-- Form per Nuova Colorazione -->
+                    <!-- Form per Nuova Colorazione (Layout a colonne) -->
                     <div class="card mb-4 border-0 shadow-sm">
                         <div class="card-body">
                             <h6 class="card-title text-primary mb-3"><i class="bi bi-plus-circle"></i> Aggiungi Lavoro Oggi</h6>
+                            
                             <div class="row g-2">
-                                <div class="col-md-4">
-                                    <label class="small text-muted">Data</label>
+                                <div class="col-md-3">
+                                    <label class="small text-muted fw-bold">Data</label>
                                     <input type="date" id="addWorkDate" class="form-control">
                                 </div>
-                                <div class="col-md-8">
-                                    <label class="small text-muted">Prodotti / Formula</label>
-                                    <input type="text" id="addWorkFormula" class="form-control" placeholder="Es: Colore 6.0 + 20vol">
+                                <div class="col-md-3">
+                                    <label class="small text-muted fw-bold">Tipo</label>
+                                    <input type="text" id="addWorkType" class="form-control" placeholder="Es: Colore">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="small text-muted fw-bold">Nuance</label>
+                                    <input type="text" id="addWorkNuance" class="form-control" placeholder="Es: 6.0">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="small text-muted fw-bold">Ossidante</label>
+                                    <input type="text" id="addWorkOxi" class="form-control" placeholder="Es: 20 vol">
                                 </div>
                                 <div class="col-12">
-                                    <input type="text" id="addWorkNotes" class="form-control form-control-sm" placeholder="Note (facoltativo)">
+                                    <label class="small text-muted fw-bold">Note</label>
+                                    <input type="text" id="addWorkNotes" class="form-control" placeholder="Eventuali note aggiuntive...">
                                 </div>
-                                <div class="col-12 mt-2">
+                                <div class="col-12 mt-3">
                                     <button id="btnSaveExistingWork" class="btn btn-primary w-100">Salva nel Dettaglio</button>
                                 </div>
                             </div>
@@ -138,14 +152,28 @@
 
                         <hr class="my-3 text-muted">
 
-                        <!-- Dati Primo Lavoro -->
-                        <div class="col-12">
-                            <label class="form-label fw-bold small">Data Lavoro</label>
-                            <input type="date" id="newClientDate" class="form-control">
+                        <!-- Dati Primo Lavoro Separati -->
+                        <div class="col-12 mb-2">
+                             <label class="form-label fw-bold small">Data</label>
+                             <input type="date" id="newClientDate" class="form-control">
                         </div>
-                        <div class="col-12">
-                            <label class="form-label fw-bold small">Prodotti usati / Formula</label>
-                            <textarea id="newClientFormula" class="form-control" rows="2" placeholder="Es: Tubo 7.1, Ossigeno 20 vol..."></textarea>
+
+                        <div class="col-4">
+                            <label class="form-label fw-bold small">Tipo</label>
+                            <input type="text" id="newClientType" class="form-control" placeholder="Es: Tinta">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-bold small">Nuance</label>
+                            <input type="text" id="newClientNuance" class="form-control" placeholder="Es: 7.1">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-bold small">Ossidante</label>
+                            <input type="text" id="newClientOxi" class="form-control" placeholder="Es: 20vol">
+                        </div>
+                        
+                        <div class="col-12 mt-2">
+                            <label class="form-label fw-bold small">Note</label>
+                            <textarea id="newClientNotes" class="form-control" rows="2" placeholder="Note aggiuntive..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -189,7 +217,7 @@
         $('#addWorkDate').val(today);
 
         // ---------------------------------------------------------
-        // LETTURA DATI (REAL-TIME)
+        // LETTURA DATI
         // ---------------------------------------------------------
         const q = query(collection(db, "clients"), orderBy("lastVisitDate", "desc"));
         
@@ -219,6 +247,7 @@
 
         // Render Card
         function renderClientCard(client) {
+            // Qui mostriamo ancora lastColoration, che sarà una stringa composta (Tipo + Nuance + Oxi)
             const lastColor = client.lastColoration || "Nessun dato";
             let formattedDate = "";
             if(client.lastVisitDate) {
@@ -235,7 +264,7 @@
                                 <span class="badge bg-light text-secondary border">${formattedDate}</span>
                             </div>
                             <p class="card-text text-muted small mb-1 text-uppercase fw-bold" style="font-size: 0.7rem;">Ultimo lavoro:</p>
-                            <p class="card-text text-primary">${lastColor}</p>
+                            <p class="card-text text-primary text-truncate">${lastColor}</p>
                         </div>
                     </div>
                 </div>
@@ -250,7 +279,11 @@
         function openClientDetails(client) {
             currentClientId = client.id;
             $('#modalClientName').text(`${client.firstName} ${client.lastName}`);
-            $('#addWorkFormula').val(''); 
+            
+            // Reset campi nuovo lavoro
+            $('#addWorkType').val('');
+            $('#addWorkNuance').val('');
+            $('#addWorkOxi').val('');
             $('#addWorkNotes').val('');
             $('#addWorkDate').val(new Date().toISOString().split('T')[0]);
             
@@ -274,12 +307,27 @@
                 const dateParts = item.date ? item.date.split('-') : ['','',''];
                 const niceDate = item.date ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : 'N/D';
 
+                // Gestiamo sia i vecchi dati (che avevano solo 'formula') sia i nuovi
+                const displayType = item.type || '';
+                const displayNuance = item.nuance || '';
+                const displayOxi = item.oxidant || '';
+                // Se è un vecchio record che ha solo formula, usiamo quella come nuance o tipo
+                const legacyFormula = item.formula && !item.type && !item.nuance ? item.formula : '';
+
                 const html = `
                     <div class="history-item">
                         <div class="fw-bold text-dark mb-1">${niceDate}</div>
-                        <div class="p-2 bg-light rounded border">
-                            <div class="fw-semibold text-primary">${item.formula}</div>
-                            ${item.notes ? `<div class="text-secondary small mt-1"><i class="bi bi-sticky"></i> ${item.notes}</div>` : ''}
+                        <div class="p-3 bg-light rounded border">
+                            <!-- Riga Prodotti -->
+                            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                ${displayType ? `<span class="badge badge-type text-uppercase">${displayType}</span>` : ''}
+                                ${displayNuance ? `<span class="fw-bold fs-5 text-dark">${displayNuance}</span>` : ''}
+                                ${displayOxi ? `<span class="badge badge-oxi">${displayOxi}</span>` : ''}
+                                ${legacyFormula ? `<span class="fw-bold text-dark">${legacyFormula}</span>` : ''}
+                            </div>
+                            
+                            <!-- Note -->
+                            ${item.notes ? `<div class="text-secondary small border-top pt-2 mt-2"><i class="bi bi-pencil"></i> ${item.notes}</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -298,37 +346,26 @@
         // SALVATAGGIO & EXPORT
         // ---------------------------------------------------------
 
-        // EXPORT DATI (BACKUP)
+        // EXPORT DATI
         document.getElementById('btnExportData').addEventListener('click', async () => {
             if(!confirm("Vuoi scaricare un backup completo di tutti i clienti?")) return;
-
             try {
-                // Leggiamo tutto il database una tantum
                 const qExport = query(collection(db, "clients"));
                 const querySnapshot = await getDocs(qExport);
-                
                 let exportData = [];
                 querySnapshot.forEach((doc) => {
-                    exportData.push({
-                        id: doc.id,
-                        ...doc.data()
-                    });
+                    exportData.push({ id: doc.id, ...doc.data() });
                 });
-
-                // Creiamo il file JSON
                 const dataStr = JSON.stringify(exportData, null, 2);
                 const blob = new Blob([dataStr], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
-                
-                // Creiamo un link invisibile per scaricarlo
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = `backup_parrucchiere_${new Date().toISOString().split('T')[0]}.json`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                URL.revokeObjectURL(url); // Pulizia memoria
-
+                URL.revokeObjectURL(url); 
             } catch (e) {
                 console.error(e);
                 alert("Errore durante il backup: " + e.message);
@@ -340,31 +377,45 @@
             const name = $('#newClientName').val().trim();
             const surname = $('#newClientSurname').val().trim();
             const date = $('#newClientDate').val();
-            const formula = $('#newClientFormula').val().trim();
+            
+            const type = $('#newClientType').val().trim();
+            const nuance = $('#newClientNuance').val().trim();
+            const oxi = $('#newClientOxi').val().trim();
+            const notes = $('#newClientNotes').val().trim();
 
             if(!name || !surname) { alert("Nome e Cognome obbligatori"); return; }
-            if(!formula) { alert("Prodotti mancanti"); return; }
+            if(!nuance && !type) { alert("Inserisci almeno il Tipo o la Nuance"); return; }
             if(!date) { alert("Data mancante"); return; }
 
             const btn = $('#btnSaveNewClient');
             btn.prop('disabled', true).text('Attendere...');
 
+            // Creiamo una stringa combinata per la visualizzazione rapida nella lista
+            const combinedFormula = `${type} ${nuance} ${oxi}`.trim();
+
             try {
                 await addDoc(collection(db, "clients"), {
                     firstName: name,
                     lastName: surname,
-                    lastColoration: formula,
+                    lastColoration: combinedFormula, // Per la dashboard
                     lastVisitDate: date,
-                    history: [{ date: date, formula: formula, notes: "Prima visita" }]
+                    history: [{ 
+                        date: date, 
+                        type: type,
+                        nuance: nuance,
+                        oxidant: oxi,
+                        notes: notes,
+                        formula: combinedFormula // Backup compatibilità
+                    }]
                 });
                 
                 const modalEl = document.getElementById('newClientModal');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl);
                 modalInstance.hide();
                 
-                $('#newClientName').val('');
-                $('#newClientSurname').val('');
-                $('#newClientFormula').val('');
+                // Pulisci
+                $('#newClientName').val(''); $('#newClientSurname').val('');
+                $('#newClientType').val(''); $('#newClientNuance').val(''); $('#newClientOxi').val(''); $('#newClientNotes').val('');
                 
             } catch (e) {
                 alert("Errore: " + e.message);
@@ -377,21 +428,32 @@
         document.getElementById('btnSaveExistingWork').addEventListener('click', async () => {
             if(!currentClientId) return;
             const date = $('#addWorkDate').val();
-            const formula = $('#addWorkFormula').val().trim();
+            const type = $('#addWorkType').val().trim();
+            const nuance = $('#addWorkNuance').val().trim();
+            const oxi = $('#addWorkOxi').val().trim();
             const notes = $('#addWorkNotes').val().trim();
 
-            if(!formula) { alert("Scrivi i prodotti usati!"); return; }
+            if(!nuance && !type) { alert("Inserisci almeno il Tipo o la Nuance"); return; }
             if(!date) { alert("Data mancante"); return; }
 
             const btn = $('#btnSaveExistingWork');
             btn.prop('disabled', true).text('...');
 
+            const combinedFormula = `${type} ${nuance} ${oxi}`.trim();
+
             try {
                 const clientRef = doc(db, "clients", currentClientId);
                 await updateDoc(clientRef, {
-                    lastColoration: formula,
+                    lastColoration: combinedFormula,
                     lastVisitDate: date,
-                    history: arrayUnion({ date: date, formula: formula, notes: notes })
+                    history: arrayUnion({ 
+                        date: date, 
+                        type: type,
+                        nuance: nuance,
+                        oxidant: oxi,
+                        notes: notes,
+                        formula: combinedFormula
+                    })
                 });
                 const modalEl = document.getElementById('clientModal');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl);
