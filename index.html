@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionale Parrucchiere</title>
-    <!-- Evita l'errore 404 della favicon -->
     <link rel="icon" href="data:,">
     
     <!-- Bootstrap CSS -->
@@ -15,25 +14,19 @@
     <style>
         body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
         .client-card { 
-            cursor: pointer; 
-            transition: all 0.2s; 
-            border: none;
-            border-left: 5px solid #0d6efd;
+            cursor: pointer; transition: all 0.2s; border: none; border-left: 5px solid #0d6efd;
         }
         .client-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        
         .history-timeline { border-left: 2px solid #e9ecef; padding-left: 20px; margin-left: 10px; }
         .history-item { margin-bottom: 25px; position: relative; }
         .history-item::before {
             content: ''; position: absolute; left: -26px; top: 5px;
             width: 12px; height: 12px; background: #0d6efd; border-radius: 50%; border: 2px solid #fff;
         }
-        .modal-header { background-color: #0d6efd; color: white; }
-        .btn-close { filter: invert(1); }
-        
-        /* Stile per i badge dello storico */
         .badge-type { background-color: #e7f1ff; color: #0d6efd; border: 1px solid #cff4fc; }
         .badge-oxi { background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; }
+        .modal-header { background-color: #0d6efd; color: white; }
+        .btn-close { filter: invert(1); }
     </style>
 </head>
 <body>
@@ -44,10 +37,17 @@
             <span class="navbar-brand mb-0 h1"><i class="bi bi-scissors"></i> Color Manager</span>
             
             <div class="d-flex gap-2">
-                <!-- Pulsante Backup -->
-                <button class="btn btn-outline-light btn-sm" id="btnExportData" title="Scarica una copia dei dati">
-                    <i class="bi bi-download"></i> Backup
-                </button>
+                <!-- Menu Avanzate -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-gear"></i> Dati
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" id="btnExportData"><i class="bi bi-download"></i> Backup (Download)</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#importModal"><i class="bi bi-upload"></i> Importa da Excel/JSON</a></li>
+                    </ul>
+                </div>
                 
                 <!-- Pulsante Nuovo -->
                 <button class="btn btn-light text-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#newClientModal">
@@ -64,7 +64,7 @@
             <div class="col-md-8">
                 <div class="input-group input-group-lg shadow-sm">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Cerca cliente...">
+                    <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Cerca cliente (nome, cognome o ID vecchio)...">
                 </div>
             </div>
         </div>
@@ -80,55 +80,37 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="modalClientName">Scheda Cliente</h5>
+                    <div>
+                        <h5 class="modal-title fw-bold" id="modalClientName">Scheda Cliente</h5>
+                        <small id="modalOldId" class="text-white-50" style="font-size: 0.8rem;"></small>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body bg-light">
                     
-                    <!-- Form per Nuova Colorazione (Layout a colonne) -->
+                    <!-- Form per Nuova Colorazione -->
                     <div class="card mb-4 border-0 shadow-sm">
                         <div class="card-body">
                             <h6 class="card-title text-primary mb-3"><i class="bi bi-plus-circle"></i> Aggiungi Lavoro Oggi</h6>
-                            
                             <div class="row g-2">
-                                <div class="col-md-3">
-                                    <label class="small text-muted fw-bold">Data</label>
-                                    <input type="date" id="addWorkDate" class="form-control">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="small text-muted fw-bold">Tipo</label>
-                                    <input type="text" id="addWorkType" class="form-control" placeholder="Es: Colore">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="small text-muted fw-bold">Nuance</label>
-                                    <input type="text" id="addWorkNuance" class="form-control" placeholder="Es: 6.0">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="small text-muted fw-bold">Ossidante</label>
-                                    <input type="text" id="addWorkOxi" class="form-control" placeholder="Es: 20 vol">
-                                </div>
-                                <div class="col-12">
-                                    <label class="small text-muted fw-bold">Note</label>
-                                    <input type="text" id="addWorkNotes" class="form-control" placeholder="Eventuali note aggiuntive...">
-                                </div>
-                                <div class="col-12 mt-3">
-                                    <button id="btnSaveExistingWork" class="btn btn-primary w-100">Salva nel Dettaglio</button>
-                                </div>
+                                <div class="col-md-3"><label class="small fw-bold text-muted">Data</label><input type="date" id="addWorkDate" class="form-control"></div>
+                                <div class="col-md-3"><label class="small fw-bold text-muted">Tipo</label><input type="text" id="addWorkType" class="form-control" placeholder="Es: Colore"></div>
+                                <div class="col-md-3"><label class="small fw-bold text-muted">Nuance</label><input type="text" id="addWorkNuance" class="form-control" placeholder="Es: 6.0"></div>
+                                <div class="col-md-3"><label class="small fw-bold text-muted">Ossidante</label><input type="text" id="addWorkOxi" class="form-control" placeholder="Es: 20 vol"></div>
+                                <div class="col-12"><label class="small fw-bold text-muted">Note</label><input type="text" id="addWorkNotes" class="form-control" placeholder="Note..."></div>
+                                <div class="col-12 mt-3"><button id="btnSaveExistingWork" class="btn btn-primary w-100">Salva nel Dettaglio</button></div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Storico -->
                     <h6 class="mb-3 ps-2 border-start border-4 border-primary">Storico Trattamenti</h6>
-                    <div id="historyList" class="history-timeline bg-white p-3 rounded shadow-sm">
-                        <!-- Lo storico verrà inserito qui -->
-                    </div>
+                    <div id="historyList" class="history-timeline bg-white p-3 rounded shadow-sm"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL: Nuovo Cliente (E PRIMO LAVORO) -->
+    <!-- MODAL: Nuovo Cliente -->
     <div class="modal fade" id="newClientModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -137,44 +119,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="small text-muted mb-3">Compila i dati per creare la scheda e salvare il primo lavoro.</p>
-                    
                     <div class="row g-2">
-                        <!-- Dati Anagrafici -->
-                        <div class="col-6">
-                            <label class="form-label fw-bold small">Nome</label>
-                            <input type="text" id="newClientName" class="form-control" placeholder="Nome">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label fw-bold small">Cognome</label>
-                            <input type="text" id="newClientSurname" class="form-control" placeholder="Cognome">
-                        </div>
-
+                        <div class="col-6"><label class="small fw-bold">Nome</label><input type="text" id="newClientName" class="form-control"></div>
+                        <div class="col-6"><label class="small fw-bold">Cognome</label><input type="text" id="newClientSurname" class="form-control"></div>
                         <hr class="my-3 text-muted">
-
-                        <!-- Dati Primo Lavoro Separati -->
-                        <div class="col-12 mb-2">
-                             <label class="form-label fw-bold small">Data</label>
-                             <input type="date" id="newClientDate" class="form-control">
-                        </div>
-
-                        <div class="col-4">
-                            <label class="form-label fw-bold small">Tipo</label>
-                            <input type="text" id="newClientType" class="form-control" placeholder="Es: Tinta">
-                        </div>
-                        <div class="col-4">
-                            <label class="form-label fw-bold small">Nuance</label>
-                            <input type="text" id="newClientNuance" class="form-control" placeholder="Es: 7.1">
-                        </div>
-                        <div class="col-4">
-                            <label class="form-label fw-bold small">Ossidante</label>
-                            <input type="text" id="newClientOxi" class="form-control" placeholder="Es: 20vol">
-                        </div>
-                        
-                        <div class="col-12 mt-2">
-                            <label class="form-label fw-bold small">Note</label>
-                            <textarea id="newClientNotes" class="form-control" rows="2" placeholder="Note aggiuntive..."></textarea>
-                        </div>
+                        <div class="col-12 mb-2"><label class="small fw-bold">Data</label><input type="date" id="newClientDate" class="form-control"></div>
+                        <div class="col-4"><label class="small fw-bold">Tipo</label><input type="text" id="newClientType" class="form-control" placeholder="Tinta"></div>
+                        <div class="col-4"><label class="small fw-bold">Nuance</label><input type="text" id="newClientNuance" class="form-control" placeholder="7.1"></div>
+                        <div class="col-4"><label class="small fw-bold">Ossidante</label><input type="text" id="newClientOxi" class="form-control" placeholder="20vol"></div>
+                        <div class="col-12 mt-2"><label class="small fw-bold">Note</label><textarea id="newClientNotes" class="form-control" rows="2"></textarea></div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -185,18 +138,36 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- MODAL: IMPORT JSON -->
+    <div class="modal fade" id="importModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-database-up"></i> Importa Dati da Excel/JSON</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small">1. Prepara il tuo Excel con queste colonne esatte: <br>
+                    <code>nome</code>, <code>cognome</code>, <code>old_id</code> (facoltativo), <code>ultima_formula</code> (facoltativo).<br>
+                    2. Vai su un convertitore (es. csvjson.com) e converti l'Excel in JSON.<br>
+                    3. Incolla il risultato qui sotto.</p>
+                    <textarea id="jsonImportInput" class="form-control font-monospace small" rows="10" placeholder='[{"nome":"Maria", "cognome":"Rossi", "old_id":104}, ...]'></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="btnRunImport">Avvia Importazione</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Script Logica Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, arrayUnion, onSnapshot, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const $ = window.jQuery; 
-
-        // CONFIGURAZIONE
         const firebaseConfig = {
             apiKey: "AIzaSyA3c5MmceX4gnd1IoZS-pEwSwKEhs-TaKU",
             authDomain: "mabo-75945.firebaseapp.com",
@@ -208,55 +179,38 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-
         let currentClientId = null;
-        let allClientsData = []; 
 
         const today = new Date().toISOString().split('T')[0];
         $('#newClientDate').val(today);
         $('#addWorkDate').val(today);
 
-        // ---------------------------------------------------------
         // LETTURA DATI
-        // ---------------------------------------------------------
         const q = query(collection(db, "clients"), orderBy("lastVisitDate", "desc"));
-        
         onSnapshot(q, (snapshot) => {
-            allClientsData = [];
             $('#clientsList').empty();
-
+            let count = 0;
             snapshot.forEach((doc) => {
                 const client = doc.data();
                 client.id = doc.id; 
-                allClientsData.push(client);
                 renderClientCard(client);
+                count++;
             });
-
-            if(allClientsData.length === 0) {
-                $('#clientsList').html(`
-                    <div class="col-12 text-center text-muted py-5">
-                        <i class="bi bi-inbox fs-1"></i>
-                        <p class="mt-2">Il database è vuoto o non accessibile.<br>Verifica le regole di Firestore.</p>
-                    </div>
-                `);
-            }
-        }, (error) => {
-            console.error("Errore Database:", error);
-            $('#clientsList').html(`<div class="alert alert-danger">Errore di connessione al Database. ${error.message}</div>`);
+            if(count === 0) $('#clientsList').html('<div class="col-12 text-center text-muted py-5"><i class="bi bi-inbox fs-1"></i><p>Database vuoto.</p></div>');
         });
 
-        // Render Card
         function renderClientCard(client) {
-            // Qui mostriamo ancora lastColoration, che sarà una stringa composta (Tipo + Nuance + Oxi)
             const lastColor = client.lastColoration || "Nessun dato";
             let formattedDate = "";
             if(client.lastVisitDate) {
                 const parts = client.lastVisitDate.split('-');
                 formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
             }
+            // Aggiungiamo old_id ai dati di ricerca per trovarlo
+            const searchString = `${client.firstName} ${client.lastName} ${client.old_id || ''}`;
             
             const html = `
-                <div class="col-md-4 col-sm-6 item-client" data-name="${client.firstName} ${client.lastName}">
+                <div class="col-md-4 col-sm-6 item-client" data-search="${searchString}">
                     <div class="card client-card h-100 shadow-sm bg-white" id="client-${client.id}">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
@@ -265,6 +219,7 @@
                             </div>
                             <p class="card-text text-muted small mb-1 text-uppercase fw-bold" style="font-size: 0.7rem;">Ultimo lavoro:</p>
                             <p class="card-text text-primary text-truncate">${lastColor}</p>
+                            ${client.old_id ? `<small class="text-muted" style="font-size:0.6rem">ID Access: ${client.old_id}</small>` : ''}
                         </div>
                     </div>
                 </div>
@@ -273,60 +228,43 @@
             $(`#client-${client.id}`).on('click', () => openClientDetails(client));
         }
 
-        // ---------------------------------------------------------
-        // GESTIONE MODALI
-        // ---------------------------------------------------------
         function openClientDetails(client) {
             currentClientId = client.id;
             $('#modalClientName').text(`${client.firstName} ${client.lastName}`);
+            $('#modalOldId').text(client.old_id ? `ID Storico: ${client.old_id}` : '');
             
-            // Reset campi nuovo lavoro
-            $('#addWorkType').val('');
-            $('#addWorkNuance').val('');
-            $('#addWorkOxi').val('');
-            $('#addWorkNotes').val('');
-            $('#addWorkDate').val(new Date().toISOString().split('T')[0]);
+            $('#addWorkType').val(''); $('#addWorkNuance').val(''); $('#addWorkOxi').val('');
+            $('#addWorkNotes').val(''); $('#addWorkDate').val(new Date().toISOString().split('T')[0]);
             
             renderHistory(client.history || []);
-            
-            const modalEl = document.getElementById('clientModal');
-            const modal = new bootstrap.Modal(modalEl);
-            modal.show();
+            new bootstrap.Modal(document.getElementById('clientModal')).show();
         }
 
         function renderHistory(historyArray) {
             $('#historyList').empty();
             const sortedHistory = historyArray.sort((a, b) => new Date(b.date) - new Date(a.date));
-
             if(sortedHistory.length === 0) {
                 $('#historyList').html('<p class="text-muted fst-italic">Nessuno storico disponibile.</p>');
                 return;
             }
-
             sortedHistory.forEach(item => {
                 const dateParts = item.date ? item.date.split('-') : ['','',''];
                 const niceDate = item.date ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : 'N/D';
-
-                // Gestiamo sia i vecchi dati (che avevano solo 'formula') sia i nuovi
                 const displayType = item.type || '';
                 const displayNuance = item.nuance || '';
                 const displayOxi = item.oxidant || '';
-                // Se è un vecchio record che ha solo formula, usiamo quella come nuance o tipo
                 const legacyFormula = item.formula && !item.type && !item.nuance ? item.formula : '';
 
                 const html = `
                     <div class="history-item">
                         <div class="fw-bold text-dark mb-1">${niceDate}</div>
                         <div class="p-3 bg-light rounded border">
-                            <!-- Riga Prodotti -->
                             <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
                                 ${displayType ? `<span class="badge badge-type text-uppercase">${displayType}</span>` : ''}
                                 ${displayNuance ? `<span class="fw-bold fs-5 text-dark">${displayNuance}</span>` : ''}
                                 ${displayOxi ? `<span class="badge badge-oxi">${displayOxi}</span>` : ''}
                                 ${legacyFormula ? `<span class="fw-bold text-dark">${legacyFormula}</span>` : ''}
                             </div>
-                            
-                            <!-- Note -->
                             ${item.notes ? `<div class="text-secondary small border-top pt-2 mt-2"><i class="bi bi-pencil"></i> ${item.notes}</div>` : ''}
                         </div>
                     </div>
@@ -338,93 +276,97 @@
         $('#searchInput').on('keyup', function() {
             const val = $(this).val().toLowerCase();
             $('.item-client').filter(function() {
-                $(this).toggle($(this).attr('data-name').toLowerCase().indexOf(val) > -1)
+                $(this).toggle($(this).attr('data-search').toLowerCase().indexOf(val) > -1)
             });
         });
 
-        // ---------------------------------------------------------
-        // SALVATAGGIO & EXPORT
-        // ---------------------------------------------------------
-
-        // EXPORT DATI
-        document.getElementById('btnExportData').addEventListener('click', async () => {
-            if(!confirm("Vuoi scaricare un backup completo di tutti i clienti?")) return;
+        // -----------------------
+        // LOGICA DI IMPORTAZIONE
+        // -----------------------
+        document.getElementById('btnRunImport').addEventListener('click', async () => {
+            const jsonText = $('#jsonImportInput').val();
+            if(!jsonText) { alert("Incolla prima il JSON!"); return; }
+            
             try {
-                const qExport = query(collection(db, "clients"));
-                const querySnapshot = await getDocs(qExport);
-                let exportData = [];
-                querySnapshot.forEach((doc) => {
-                    exportData.push({ id: doc.id, ...doc.data() });
-                });
-                const dataStr = JSON.stringify(exportData, null, 2);
-                const blob = new Blob([dataStr], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `backup_parrucchiere_${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url); 
-            } catch (e) {
-                console.error(e);
-                alert("Errore durante il backup: " + e.message);
+                const data = JSON.parse(jsonText);
+                if(!Array.isArray(data)) throw new Error("Il formato deve essere una lista [...]");
+
+                const btn = $('#btnRunImport');
+                btn.prop('disabled', true).text(`Importazione di ${data.length} clienti in corso...`);
+                
+                let count = 0;
+                for(let item of data) {
+                    // Mappiamo i campi dall'Excel/JSON al Database
+                    // Accetta "nome" o "Nome" o "firstName"
+                    const firstName = item.nome || item.Nome || item.firstName || "Sconosciuto";
+                    const lastName = item.cognome || item.Cognome || item.lastName || "";
+                    const oldId = item.old_id || item.ID || item.Id || null;
+                    const lastFormula = item.ultima_formula || item.UltimaFormula || "Importato da Access";
+                    
+                    await addDoc(collection(db, "clients"), {
+                        firstName: firstName,
+                        lastName: lastName,
+                        old_id: oldId, // Salviamo il vecchio ID!
+                        lastColoration: lastFormula,
+                        lastVisitDate: new Date().toISOString().split('T')[0], // Mettiamo oggi come data fittizia
+                        history: [
+                            {
+                                date: new Date().toISOString().split('T')[0],
+                                formula: lastFormula,
+                                notes: "Dato importato dallo storico precedente"
+                            }
+                        ]
+                    });
+                    count++;
+                }
+
+                alert(`Finito! Importati ${count} clienti.`);
+                const modalEl = document.getElementById('importModal');
+                bootstrap.Modal.getInstance(modalEl).hide();
+                $('#jsonImportInput').val('');
+
+            } catch(e) {
+                alert("Errore nel formato JSON: " + e.message);
+            } finally {
+                $('#btnRunImport').prop('disabled', false).text('Avvia Importazione');
             }
         });
 
-        // 1. SALVA NUOVO CLIENTE
+        // EXPORT
+        document.getElementById('btnExportData').addEventListener('click', async () => {
+            if(!confirm("Download Backup?")) return;
+            const qExport = query(collection(db, "clients"));
+            const querySnapshot = await getDocs(qExport);
+            let exportData = [];
+            querySnapshot.forEach((doc) => exportData.push({ id: doc.id, ...doc.data() }));
+            const url = URL.createObjectURL(new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" }));
+            const a = document.createElement('a');
+            a.href = url; a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        });
+
+        // SALVATAGGI
         document.getElementById('btnSaveNewClient').addEventListener('click', async () => {
             const name = $('#newClientName').val().trim();
             const surname = $('#newClientSurname').val().trim();
             const date = $('#newClientDate').val();
-            
             const type = $('#newClientType').val().trim();
             const nuance = $('#newClientNuance').val().trim();
             const oxi = $('#newClientOxi').val().trim();
             const notes = $('#newClientNotes').val().trim();
 
-            if(!name || !surname) { alert("Nome e Cognome obbligatori"); return; }
-            if(!nuance && !type) { alert("Inserisci almeno il Tipo o la Nuance"); return; }
-            if(!date) { alert("Data mancante"); return; }
-
-            const btn = $('#btnSaveNewClient');
-            btn.prop('disabled', true).text('Attendere...');
-
-            // Creiamo una stringa combinata per la visualizzazione rapida nella lista
-            const combinedFormula = `${type} ${nuance} ${oxi}`.trim();
-
-            try {
-                await addDoc(collection(db, "clients"), {
-                    firstName: name,
-                    lastName: surname,
-                    lastColoration: combinedFormula, // Per la dashboard
-                    lastVisitDate: date,
-                    history: [{ 
-                        date: date, 
-                        type: type,
-                        nuance: nuance,
-                        oxidant: oxi,
-                        notes: notes,
-                        formula: combinedFormula // Backup compatibilità
-                    }]
-                });
-                
-                const modalEl = document.getElementById('newClientModal');
-                const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                modalInstance.hide();
-                
-                // Pulisci
-                $('#newClientName').val(''); $('#newClientSurname').val('');
-                $('#newClientType').val(''); $('#newClientNuance').val(''); $('#newClientOxi').val(''); $('#newClientNotes').val('');
-                
-            } catch (e) {
-                alert("Errore: " + e.message);
-            } finally {
-                btn.prop('disabled', false).text('Salva Tutto');
-            }
+            if(!name || !surname) return alert("Nome mancante");
+            
+            const combined = `${type} ${nuance} ${oxi}`.trim();
+            await addDoc(collection(db, "clients"), {
+                firstName: name, lastName: surname,
+                lastColoration: combined || "Nuovo", lastVisitDate: date,
+                history: [{ date, type, nuance, oxidant: oxi, notes, formula: combined }]
+            });
+            bootstrap.Modal.getInstance(document.getElementById('newClientModal')).hide();
+            $('#newClientName').val(''); $('#newClientSurname').val('');
         });
 
-        // 2. SALVA LAVORO ESISTENTE
         document.getElementById('btnSaveExistingWork').addEventListener('click', async () => {
             if(!currentClientId) return;
             const date = $('#addWorkDate').val();
@@ -432,39 +374,14 @@
             const nuance = $('#addWorkNuance').val().trim();
             const oxi = $('#addWorkOxi').val().trim();
             const notes = $('#addWorkNotes').val().trim();
-
-            if(!nuance && !type) { alert("Inserisci almeno il Tipo o la Nuance"); return; }
-            if(!date) { alert("Data mancante"); return; }
-
-            const btn = $('#btnSaveExistingWork');
-            btn.prop('disabled', true).text('...');
-
-            const combinedFormula = `${type} ${nuance} ${oxi}`.trim();
-
-            try {
-                const clientRef = doc(db, "clients", currentClientId);
-                await updateDoc(clientRef, {
-                    lastColoration: combinedFormula,
-                    lastVisitDate: date,
-                    history: arrayUnion({ 
-                        date: date, 
-                        type: type,
-                        nuance: nuance,
-                        oxidant: oxi,
-                        notes: notes,
-                        formula: combinedFormula
-                    })
-                });
-                const modalEl = document.getElementById('clientModal');
-                const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                modalInstance.hide();
-            } catch (e) {
-                alert("Errore: " + e.message);
-            } finally {
-                btn.prop('disabled', false).text('Salva nel Dettaglio');
-            }
+            
+            const combined = `${type} ${nuance} ${oxi}`.trim();
+            await updateDoc(doc(db, "clients", currentClientId), {
+                lastColoration: combined, lastVisitDate: date,
+                history: arrayUnion({ date, type, nuance, oxidant: oxi, notes, formula: combined })
+            });
+            bootstrap.Modal.getInstance(document.getElementById('clientModal')).hide();
         });
-
     </script>
 </body>
 </html>
